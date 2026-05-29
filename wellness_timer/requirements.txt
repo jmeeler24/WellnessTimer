@@ -1,0 +1,10 @@
+pystray>=0.19.5
+Pillow>=10.4.0
+# Primary toast backend: talk to WinRT directly so we can set expiration_time.
+winrt-Windows.UI.Notifications>=3.2.1; sys_platform == "win32"
+winrt-Windows.Data.Xml.Dom>=3.2.1; sys_platform == "win32"
+# Fallback toast backend (no expiration control).
+winotify>=1.1.0; sys_platform == "win32"
+
+# Build-time only
+pyinstaller>=6.15.0

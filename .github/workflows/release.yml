@@ -1,0 +1,58 @@
+name: Build release
+
+# Builds WellnessTimer.exe and uploads it to a GitHub Release.
+# Trigger: pushing a tag that matches v* (e.g. v0.1.0).
+#   git tag v0.1.0
+#   git push origin v0.1.0
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  # Required by softprops/action-gh-release to create the release entry
+  # and upload assets.
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: wellness_timer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: wellness_timer/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable
+        run: pyinstaller build.spec --clean --noconfirm
+
+      - name: Smoke-check the build artifact exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist\WellnessTimer.exe)) {
+            throw "WellnessTimer.exe was not produced"
+          }
+          $size = (Get-Item dist\WellnessTimer.exe).Length / 1MB
+          Write-Host ("Built dist\WellnessTimer.exe ({0:N1} MB)" -f $size)
+
+      - name: Publish to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: wellness_timer/dist/WellnessTimer.exe
+          generate_release_notes: true
+          fail_on_unmatched_files: true
