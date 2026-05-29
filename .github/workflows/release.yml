@@ -1,22 +1,49 @@
-name: Build release
+name: CI & Release
 
-# Builds WellnessTimer.exe and uploads it to a GitHub Release.
-# Trigger: pushing a tag that matches v* (e.g. v0.1.0).
+# CodeQL runs on every push to main and pull request, gating the release
+# build that runs on v* tags. The build only executes if CodeQL passes.
+# Tag a release:
 #   git tag v0.1.0
 #   git push origin v0.1.0
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
 
 permissions:
-  # Required by softprops/action-gh-release to create the release entry
-  # and upload assets.
-  contents: write
+  contents: write          # softprops/action-gh-release needs this to publish
+  security-events: write   # CodeQL needs this to upload findings
 
 jobs:
-  build-windows:
+  codeql:
+    name: CodeQL analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
+
+  build-release:
+    name: Build & publish exe
+    needs: codeql
+    # Only build the release artifact on v* tag pushes; for plain pushes
+    # and PRs we just need the CodeQL gate to run.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     defaults:
       run:
