@@ -1,7 +1,7 @@
 name: CI & Release
 
-# CodeQL runs on every push to main and pull request, gating the release
-# build that runs on v* tags. The build only executes if CodeQL passes.
+# CodeQL runs on every push to main, PR, and weekly schedule. On v* tags it
+# also gates the Windows build that produces and uploads WellnessTimer.exe.
 # Tag a release:
 #   git tag v0.1.0
 #   git push origin v0.1.0
@@ -12,6 +12,8 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '29 9 * * 1'   # weekly, Mon ~09:29 UTC
 
 permissions:
   contents: write          # softprops/action-gh-release needs this to publish
@@ -19,30 +21,41 @@ permissions:
 
 jobs:
   codeql:
-    name: CodeQL analysis
+    name: CodeQL analysis (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+      packages: read
+      actions: read
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
-          languages: python
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
 
-      - name: Analyze
-        uses: github/codeql-action/analyze@v3
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:python"
+          category: "/language:${{ matrix.language }}"
 
   build-release:
     name: Build & publish exe
     needs: codeql
-    # Only build the release artifact on v* tag pushes; for plain pushes
-    # and PRs we just need the CodeQL gate to run.
+    # Only build the release artifact on v* tag pushes; for plain pushes,
+    # PRs, and the weekly schedule we just need CodeQL to run.
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     defaults:
