@@ -36,7 +36,7 @@ else:
 # so the AppID itself has to be human-readable.
 APP_ID = "Wellness Timer"
 APP_TITLE = "Wellness Timer"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.1.1"
 GITHUB_URL = "https://github.com/jmeeler24/WellnessTimer"
 
 log = logging.getLogger("wellness_timer")
